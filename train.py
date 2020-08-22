@@ -3,17 +3,17 @@ from sklearn.model_selection import KFold as KF
 from model import get_models, is_net
 import numpy as np
 from validate import validate
-from preprocess import normalize_df, row_per_patient
+from preprocess import normalize_df, drop_first_point
 from features import select_best_features, add_features_after_normalization
 
 def getX(df):
-    if 'Coef' in df.columns:
-        return df.drop(columns=['Patient', 'Coef']).drop_duplicates().values
+    if 'Patient_Week' in df.columns:
+        return df.drop(columns=['Patient', 'FVC', 'Patient_Week']).values
     else:
-        return df.drop(columns=['Patient']).drop_duplicates().values    
+        return df.drop(columns=['Patient', 'FVC']).drop_duplicates().values
     
 def getY(df):
-    return df['Coef'].values
+    return df['FVC'].values
 
 def get_X_y(df):
     return getX(df), getY(df)
@@ -27,19 +27,11 @@ def train_val_split(df, random_state=2020):
         yield df[df['Patient'].isin(train_patients)].reset_index(drop=True), \
                 df[df['Patient'].isin(val_patients)].reset_index(drop=True), 
 
-def train(df_train_coef, df_train):
+def train(df_train_coef, df_train, random_states):
     preds = []
     maes = []
     clfs = []
     skbs = []
-
-    random_states = [
-        41,
-        81, 
-        901, 
-        1337, 
-        2020
-    ]
 
     scores = []
 
@@ -49,14 +41,18 @@ def train(df_train_coef, df_train):
             print(f'Fold: {fold}')
             train_df = add_features_after_normalization(train_df, train_df)
             val_df = add_features_after_normalization(val_df, train_df)
-            train_df = row_per_patient(train_df)
-            val_df = row_per_patient(val_df)
+            train_df = drop_first_point(train_df)
+            val_df = drop_first_point(val_df)
+
+            # train_df.to_csv('train_df.csv')
+            # val_df.to_csv('val_df.csv')
+            # exit()
 
             X_train, y_train = get_X_y(train_df)
             X_val, y_val = get_X_y(val_df)
 
             skb = select_best_features(X_train, y_train, k=16)
-            # scores.append(skb.scores_)
+            scores.append(skb.scores_)
             X_train = skb.transform(X_train)
             X_val = skb.transform(X_val)
             skbs.append(skb)
@@ -73,15 +69,16 @@ def train(df_train_coef, df_train):
                 val_fold_preds.append(clf.predict(X_val).flatten())
 
             clfs.append(_clfs)
-            train_fold_coefs = np.mean(train_fold_preds, axis=0)
-            val_fold_coefs = np.mean(val_fold_preds, axis=0)
+            train_fold_preds = np.mean(train_fold_preds, axis=0)
+            val_fold_preds = np.mean(val_fold_preds, axis=0)
 
             train_weeks_df = df_train[df_train['Patient'].isin(train_df['Patient'])]
             val_weeks_df = df_train[df_train['Patient'].isin(val_df['Patient'])]
 
-            _mae = validate(val_weeks_df, val_df, val_fold_coefs)
+            _mae = validate(val_weeks_df, val_fold_preds)
             maes.append(_mae)
-        
+
+    print(f'MAES: {maes}') 
     print(f'MAE: {np.mean(maes)}')
     print(f'STD: {np.std(maes)}')
 

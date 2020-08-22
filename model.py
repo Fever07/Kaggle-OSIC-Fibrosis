@@ -37,6 +37,6 @@ def get_models(num_features, random_state=42):
     clfs.append(lm.Ridge(alpha=6, random_state=random_state))
     clfs.append(lm.SGDRegressor(loss='huber', alpha=0.5, random_state=random_state))
     clfs.append(lm.HuberRegressor(epsilon=1, alpha=0.1, max_iter=10000))
-    clfs.append(get_nn_model(num_features=num_features, random_state=random_state))
+    # clfs.append(get_nn_model(num_features=num_features, random_state=random_state))
     clfs.append(svm.SVR(kernel='linear', C=0.1))
     return clfs

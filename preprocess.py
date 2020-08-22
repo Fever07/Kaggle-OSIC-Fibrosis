@@ -24,6 +24,20 @@ def row_per_patient(df):
         df.groupby(['Patient']).transform('first').drop_duplicates().reset_index(drop=True)
     ], axis=1)
 
+def drop_first_point(df):
+    df = df.copy()
+    first_weeks = df.groupby('Patient').transform('first').drop_duplicates()
+    df.drop(first_weeks.index, inplace=True)
+    return df
+
+def add_first_point(df):
+    df = df.copy()
+    first_weeks = df.groupby('Patient').transform('first')
+    df['Weeks_first'] = first_weeks['Weeks']
+    df['FVC_first'] = first_weeks['FVC']
+    df['Percent_first'] = first_weeks['Percent']
+    return df
+
 def init_normalizer(df):
     numeric_df = df[FIT_COLUMNS]
     NORMALIZER.fit(numeric_df)
@@ -59,12 +73,3 @@ def denormalize(y):
     fvc_min = FVC_RANGE[0]
     fvc_max = FVC_RANGE[1]
     return y * (fvc_max - fvc_min) + fvc_min
-
-def add_coef(df):
-    df = df.copy()
-    for patient_id in df['Patient'].unique():
-        pat_df = df[df['Patient'] == patient_id]
-        coef = get_coef(pat_df['Weeks'].values, pat_df['FVC'].values)
-        df.loc[df['Patient'] == patient_id, 'Coef'] = [coef] * (df['Patient'] == patient_id).sum()
-
-    return df

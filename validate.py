@@ -1,14 +1,16 @@
 from utils import mae
 import numpy as np
 from constants import MIN_WEEK, MAX_WEEK, WEEKS
-from preprocess import denormalize
+from preprocess import denormalize, drop_first_point
 
-def predict_by_coef(df, coefs):
-    biases = df['FVC'].values - df['Weeks'].values * coefs
-    patient_fvc = []
-    for patient_id, coef, bias in zip(df['Patient'], coefs, biases):
-        patient_fvc.append(coef * WEEKS + bias)
-    return patient_fvc
+def get_fvc_by_patient(weeks_df, fvc_pred):
+    df = weeks_df.copy()
+    weeks_df['FVC_pred'] = fvc_pred
+    fvc_pred_by_patient = []
+    for patient in weeks_df['Patient'].unique():
+        pat_df = weeks_df[weeks_df['Patient'] == patient]
+        fvc_pred_by_patient.append(pat_df['FVC_pred'].values)
+    return fvc_pred_by_patient
 
 def validate_predict(weeks_df, fvc_pred):
     y_true = []
@@ -16,28 +18,22 @@ def validate_predict(weeks_df, fvc_pred):
     
     eps = 1e-4
     for patient_id, patient_preds in zip(weeks_df['Patient'].unique(), fvc_pred):
-        patient_weeks = weeks_df[weeks_df['Patient'] == patient_id]['Weeks']
-        patient_fvc = weeks_df[weeks_df['Patient'] == patient_id]['FVC']
-        last_3 = patient_weeks[-3:]
+        patient_weeks = weeks_df[weeks_df['Patient'] == patient_id]['Weeks'].values
+        patient_fvc = weeks_df[weeks_df['Patient'] == patient_id]['FVC'].values
+
         last_fvc = patient_fvc[-3:]
+        last_preds = patient_preds[-3:]
         
-        r2s = []
-        maes = []
-        for last_week, last_fvc in zip(last_3, last_fvc):
-            try:            
-                idx = np.where(np.abs(WEEKS - last_week) < eps)[0][0]
-            except:
-                print(weeks_df[weeks_df['Patient'] == patient_id])
-                exit(0)
-            y_pred.append(patient_preds[idx])
-            y_true.append(last_fvc)
-    
+        y_true.extend(last_fvc)
+        y_pred.extend(last_preds)
+
     y_true = np.array(y_true)
     y_pred = np.array(y_pred)
     return mae(denormalize(y_true), denormalize(y_pred))
     
-def validate(weeks_df, initial_df, coefs):
-    fvc_pred = predict_by_coef(initial_df, coefs)
-    return validate_predict(weeks_df, fvc_pred)
+def validate(weeks_df, fvc_pred):
+    weeks_df = drop_first_point(weeks_df)
+    fvc_pred_by_patient = get_fvc_by_patient(weeks_df, fvc_pred)
+    return validate_predict(weeks_df, fvc_pred_by_patient)
 
 

@@ -3,7 +3,7 @@ import pandas as pd
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 from constants import DATA_DIR
-from preprocess import init_normalizer, remove_duplicates, prepare_df, encode_categorical, normalize_df, add_coef, row_per_patient
+from preprocess import init_normalizer, remove_duplicates, prepare_df, encode_categorical, normalize_df, row_per_patient, drop_first_point, add_first_point
 from train import train
 from submit import submit_preds
 from features import add_features_before_normalization, add_categorical_features, add_features_after_normalization, init_features_normalizer, normalize_features, select_best_features
@@ -26,10 +26,18 @@ if __name__ == "__main__":
     df_train = normalize_df(df_train)
     init_features_normalizer(df_train)
     df_train = normalize_features(df_train)
-    
-    df_train = add_coef(df_train)
 
+    df_train = add_first_point(df_train)
     df_train.to_csv('df_train.csv')
+    print(drop_first_point(df_train).shape)
 
-    clfs, skbs, mean_mae = train(df_train, df_train)
+    random_states = [
+        41,
+        81, 
+        901, 
+        1337, 
+        2020
+    ]
+
+    clfs, skbs, mean_mae = train(df_train, df_train, random_states)
     submit_preds(df_test, df_train, clfs, skbs, mean_mae * np.sqrt(2))
