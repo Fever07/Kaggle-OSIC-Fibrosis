@@ -24,19 +24,23 @@ def get_nn_model(num_features=9, random_state=42):
     return model
 
 def is_net(clf):
-    return type(clf) == tf.keras.models.Model
+    if tf.__version__[0] == '1':
+        return type(clf) == tf.keras.models.Model
+    else:
+        return type(clf) == tf.python.keras.engine.functional.Functional
 
-def get_models(num_features, random_state=42):
+def get_models(num_features, include_nn=True, random_state=42):
     clfs = []
-    clfs.append(GBR(**{'n_estimators': 300,
-          'max_depth': 4,
-          'min_samples_split': 8,
-          'learning_rate': 0.0075,
-          'loss': 'huber',
-          'random_state': random_state}))
-    clfs.append(lm.Ridge(alpha=6, random_state=random_state))
-    clfs.append(lm.SGDRegressor(loss='huber', alpha=0.5, random_state=random_state))
-    clfs.append(lm.HuberRegressor(epsilon=1, alpha=0.1, max_iter=10000))
-    # clfs.append(get_nn_model(num_features=num_features, random_state=random_state))
-    clfs.append(svm.SVR(kernel='linear', C=0.1))
+    # clfs.append(GBR(**{'n_estimators': 300,
+    #       'max_depth': 4,
+    #       'min_samples_split': 8,
+    #       'learning_rate': 0.0075,
+    #       'loss': 'huber',
+    #       'random_state': random_state}))
+    clfs.append(lm.Ridge(random_state=random_state))
+    # clfs.append(lm.SGDRegressor(loss='huber', random_state=random_state))
+    clfs.append(lm.HuberRegressor(max_iter=10000))
+    if include_nn:
+        clfs.append(get_nn_model(num_features=num_features, random_state=random_state))
+    # clfs.append(svm.SVR(kernel='linear'))
     return clfs

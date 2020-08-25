@@ -3,14 +3,15 @@ from sklearn.model_selection import KFold as KF
 from model import get_models, is_net
 import numpy as np
 from validate import validate
-from preprocess import normalize_df, drop_first_point
+from preprocess import normalize_df, drop_first_point, remove_outliers
 from features import select_best_features, add_features_after_normalization
+from utils import _laplace
 
 def getX(df):
     if 'Patient_Week' in df.columns:
-        return df.drop(columns=['Patient', 'FVC', 'Patient_Week']).values
+        return df.drop(columns=['Patient', 'FVC', 'Percent', 'Patient_Week']).values
     else:
-        return df.drop(columns=['Patient', 'FVC']).drop_duplicates().values
+        return df.drop(columns=['Patient', 'FVC', 'Percent']).values
     
 def getY(df):
     return df['FVC'].values
@@ -27,7 +28,7 @@ def train_val_split(df, random_state=2020):
         yield df[df['Patient'].isin(train_patients)].reset_index(drop=True), \
                 df[df['Patient'].isin(val_patients)].reset_index(drop=True), 
 
-def train(df_train_coef, df_train, random_states):
+def train(df_train_coef, df_train, random_states, include_nn=True):
     preds = []
     maes = []
     clfs = []
@@ -38,7 +39,7 @@ def train(df_train_coef, df_train, random_states):
     for random_state in random_states:
         print(f'Seed: {random_state}')
         for fold, (train_df, val_df) in enumerate(train_val_split(df_train_coef, random_state=random_state)):
-            print(f'Fold: {fold}')
+            print(f'Fold: {fold}')  
             train_df = add_features_after_normalization(train_df, train_df)
             val_df = add_features_after_normalization(val_df, train_df)
             train_df = drop_first_point(train_df)
@@ -51,13 +52,13 @@ def train(df_train_coef, df_train, random_states):
             X_train, y_train = get_X_y(train_df)
             X_val, y_val = get_X_y(val_df)
 
-            skb = select_best_features(X_train, y_train, k=16)
+            skb = select_best_features(X_train, y_train, k=2)
             scores.append(skb.scores_)
             X_train = skb.transform(X_train)
             X_val = skb.transform(X_val)
             skbs.append(skb)
 
-            _clfs = get_models(num_features=X_train.shape[1], random_state=random_state)
+            _clfs = get_models(num_features=X_train.shape[1], include_nn=include_nn, random_state=random_state)
             train_fold_preds = []
             val_fold_preds = []
             for clf in _clfs:
@@ -78,13 +79,15 @@ def train(df_train_coef, df_train, random_states):
             _mae = validate(val_weeks_df, val_fold_preds)
             maes.append(_mae)
 
-    print(f'MAES: {maes}') 
-    print(f'MAE: {np.mean(maes)}')
+    # print(f'MAES: {maes}') 
+    val_mae = np.mean(maes)
+    print(f'MAE: {val_mae}')
     print(f'STD: {np.std(maes)}')
+    print(f'Laplace: {_laplace(val_mae, val_mae * np.sqrt(2))}')
 
     # import pickle
     # with open('scores.pkl', 'wb') as file:
-    #     pickle.dump(train_df.drop(columns=['Patient', 'Coef']).columns, file)
+    #     pickle.dump(train_df.drop(columns=['Patient', 'FVC', 'Percent']).columns, file)
     #     pickle.dump(scores, file)
 
-    return clfs, skbs, np.mean(maes)
+    return clfs, skbs, val_mae

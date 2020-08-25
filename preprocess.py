@@ -4,7 +4,7 @@ import os
 from constants import MIN_WEEK, MAX_WEEK, CATEGORICAL_FEATURES, NUMERICAL_FEATURES
 import sklearn
 import sklearn.linear_model as lm
-from utils import get_coef
+from utils import detect_outlier
 
 NORMALIZER = sklearn.preprocessing.MinMaxScaler()
 # Weeks fitted separately
@@ -17,6 +17,18 @@ def remove_duplicates(df_train):
     df_train.drop_duplicates(inplace=True)
     df_train.reset_index(drop=True)
     return df_train
+
+def remove_outliers(df):
+    df = df.copy()
+    index = []
+    for patient in df['Patient'].unique():
+        pat_df = df[df['Patient'] == patient]
+        i = detect_outlier(pat_df['Weeks'], pat_df['FVC'])
+        if i < len(pat_df) - 3:
+            index.append(pat_df.index[i])
+
+    df.drop(index=index, inplace=True)
+    return df
 
 def row_per_patient(df):
     return pd.concat([
@@ -44,7 +56,7 @@ def init_normalizer(df):
 
     # Store fvc min/max values separately
     FVC_RANGE.append(NORMALIZER.data_min_[FIT_COLUMNS.index('FVC')])
-    FVC_RANGE.append(NORMALIZER.data_max_[FIT_COLUMNS.index('FVC')])
+    FVC_RANGE.append(NORMALIZER.data_max_[FIT_COLUMNS.index('FVC')])        
 
 def normalize_df(df):
     df = df.copy()

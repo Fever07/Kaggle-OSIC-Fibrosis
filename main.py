@@ -35,9 +35,9 @@ if __name__ == "__main__":
         41,
         81, 
         901, 
-        1337, 
+        1337,
         2020
     ]
 
-    clfs, skbs, mean_mae = train(df_train, df_train, random_states)
+    clfs, skbs, mean_mae = train(df_train, df_train, include_nn=False, random_states=random_states)
     submit_preds(df_test, df_train, clfs, skbs, mean_mae * np.sqrt(2))

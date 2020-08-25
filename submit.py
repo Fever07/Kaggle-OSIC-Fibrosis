@@ -8,8 +8,7 @@ from features import encode_categorical, add_features_before_normalization, add_
 def add_weeks_to_test(df):
     df = df.copy()
     patient_ids = df['Patient']
-    base_weeks = df['Weeks']
-    
+
     df = pd.concat([df] * len(WEEKS), ignore_index=True)
     df = add_first_point(df)
     df['Patient_Week'] = [f'{patient_id}_{week}' for (patient_id, week) in zip(df['Patient'], np.repeat(np.arange(MIN_WEEK, MAX_WEEK + 1), len(patient_ids)))]
