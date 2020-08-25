@@ -12,7 +12,7 @@ def get_fvc_by_patient(weeks_df, fvc_pred):
         fvc_pred_by_patient.append(pat_df['FVC_pred'].values)
     return fvc_pred_by_patient
 
-def validate_predict(weeks_df, fvc_pred):
+def validate_predict(weeks_df, fvc_pred, per_point=False):
     y_true = []
     y_pred = []
     
@@ -29,11 +29,14 @@ def validate_predict(weeks_df, fvc_pred):
 
     y_true = np.array(y_true)
     y_pred = np.array(y_pred)
-    return mae(denormalize(y_true), denormalize(y_pred))
+    if per_point:
+        return np.abs(denormalize(y_true) - denormalize(y_pred))
+    else:
+        return mae(denormalize(y_true), denormalize(y_pred))
 
-def validate(weeks_df, fvc_pred):
+def validate(weeks_df, fvc_pred, per_point=False):
     weeks_df = drop_first_point(weeks_df)
     fvc_pred_by_patient = get_fvc_by_patient(weeks_df, fvc_pred)
-    return validate_predict(weeks_df, fvc_pred_by_patient)
+    return validate_predict(weeks_df, fvc_pred_by_patient, per_point=per_point)
 
 

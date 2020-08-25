@@ -14,6 +14,11 @@ def laplace(fvc_true, fvc_pred, sigma):
     metric = _laplace(delta, sigma_clip)
     return np.mean(metric)
 
+def laplace_optimal(fvc_mae):
+    deltas = np.minimum(fvc_mae, max_delta)
+    sigmas = np.maximum(deltas * np.sqrt(2), min_sigma)
+    return np.mean(_laplace(deltas, sigmas))
+
 def mae(y_true, y_pred):
     return np.mean(np.abs(y_true - y_pred))
 

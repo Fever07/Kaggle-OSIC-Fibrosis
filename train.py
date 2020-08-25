@@ -5,7 +5,8 @@ import numpy as np
 from validate import validate
 from preprocess import normalize_df, drop_first_point, remove_outliers
 from features import select_best_features, add_features_after_normalization
-from utils import _laplace
+from utils import _laplace, laplace_optimal
+import itertools
 
 def getX(df):
     if 'Patient_Week' in df.columns:
@@ -76,14 +77,16 @@ def train(df_train_coef, df_train, random_states, include_nn=True):
             train_weeks_df = df_train[df_train['Patient'].isin(train_df['Patient'])]
             val_weeks_df = df_train[df_train['Patient'].isin(val_df['Patient'])]
 
-            _mae = validate(val_weeks_df, val_fold_preds)
+            _mae = validate(val_weeks_df, val_fold_preds, per_point=True)
             maes.append(_mae)
 
-    # print(f'MAES: {maes}') 
-    val_mae = np.mean(maes)
+    print(f'MAES: {maes}') 
+    per_fold_maes = [np.mean(fold_maes) for fold_maes in maes]
+    val_mae = np.mean(per_fold_maes)
     print(f'MAE: {val_mae}')
-    print(f'STD: {np.std(maes)}')
+    print(f'STD: {np.std(per_fold_maes)}')
     print(f'Laplace: {_laplace(val_mae, val_mae * np.sqrt(2))}')
+    print(f'Laplace opt.: {laplace_optimal(np.array(list(itertools.chain(*maes))))}')
 
     # import pickle
     # with open('scores.pkl', 'wb') as file:
