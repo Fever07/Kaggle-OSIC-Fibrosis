@@ -12,7 +12,9 @@ FIT_COLUMNS_FEATURES = ['FVC_perc']
 FEATS_TO_AVERAGE = [
     'FVC_last_first',
     'Weeks_last_first',
-    'Coef_last_first'
+    'Coef_last_first',
+    'FVC_last',
+    'Weeks_last'
 ]
 ADDED_CATEGORICAL_FEATURES = {}
 FEATURE_AVERAGE_ALPHA = 5
@@ -50,6 +52,8 @@ def add_features_after_normalization(df_dest, df_src):
     df_src['FVC_last_first'] = df_src.groupby('Patient').transform('last')['FVC'] - df_src.groupby('Patient').transform('first')['FVC']
     df_src['Weeks_last_first'] = df_src.groupby('Patient').transform('last')['Weeks'] - df_src.groupby('Patient').transform('first')['Weeks']
     df_src['Coef_last_first'] = df_src['FVC_last_first'] / df_src['Weeks_last_first']
+    df_src['FVC_last'] = df_src.groupby('Patient').transform('last')['FVC']
+    df_src['Weeks_last'] = df_src.groupby('Patient').transform('last')['Weeks']
 
     pat_df_dest = row_per_patient(df_dest)
     pat_df_src = row_per_patient(df_src)
@@ -91,10 +95,23 @@ def init_features_normalizer(df):
     numeric_df = df[FIT_COLUMNS_FEATURES]
     NORMALIZER_FEATURES.fit(numeric_df)
 
-def select_best_features(X, y, k=2):    
+def select_best_features(X, y, keep_features=None, k=2):    
     skb = SelectKBest(f_regression, k=k)
-    skb.fit(X, y)
-    return skb
+    if keep_features:
+        keep_inds = np.array(keep_features)
+        fit_inds = np.array(list(set(np.arange(0, X.shape[1])).difference(set(keep_inds))))
+        skb.fit(X[:, fit_inds], y)
+        _transform = skb.transform
+        def transform_and_keep(_X):
+            _X_transformed = np.zeros(shape=[_X.shape[0], k + len(keep_features)], dtype=_X.dtype)
+            _X_transformed[:, :k] = _transform(_X[:, fit_inds])
+            _X_transformed[:, k:] = _X[:, keep_inds]
+            return _X_transformed
+        skb.transform = transform_and_keep
+        return skb
+    else:
+        skb.fit(X, y)
+        return skb
 
 def normalize_features(df):
     df = df.copy()
@@ -103,5 +120,5 @@ def normalize_features(df):
     from preprocess import NORMALIZER, FVC_RANGE
     fvc_min = FVC_RANGE[0]
     fvc_max = FVC_RANGE[1]
-    df['FVC_perc'] = (df['FVC_perc'] - fvc_min) / (fvc_max - fvc_min)    
+    df['FVC_perc'] = (df['FVC_perc'] - fvc_min) / (fvc_max - fvc_min)
     return df

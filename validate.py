@@ -5,7 +5,7 @@ from preprocess import denormalize, drop_first_point
 
 def get_fvc_by_patient(weeks_df, fvc_pred):
     df = weeks_df.copy()
-    df['FVC_pred'] = fvc_pred
+    df['FVC_pred'] = fvc_pred    
     fvc_pred_by_patient = []
     for patient in df['Patient'].unique():
         pat_df = df[df['Patient'] == patient]
@@ -23,16 +23,16 @@ def validate_predict(weeks_df, fvc_pred, per_point=False):
 
         last_fvc = patient_fvc[-3:]
         last_preds = patient_preds[-3:]
-        
-        y_true.extend(last_fvc)
-        y_pred.extend(last_preds)
+
+        y_true.extend(denormalize(last_fvc))
+        y_pred.extend(denormalize(last_preds))
 
     y_true = np.array(y_true)
     y_pred = np.array(y_pred)
     if per_point:
-        return np.abs(denormalize(y_true) - denormalize(y_pred))
+        return np.abs(y_true - y_pred)
     else:
-        return mae(denormalize(y_true), denormalize(y_pred))
+        return mae(y_true, y_pred)
 
 def validate(weeks_df, fvc_pred, per_point=False):
     weeks_df = drop_first_point(weeks_df)
