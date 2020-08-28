@@ -2,6 +2,7 @@ from utils import mae, laplace
 import numpy as np
 from constants import MIN_WEEK, MAX_WEEK, WEEKS
 from preprocess import denormalize, drop_first_point
+from features import denormalize_diff
 
 def get_fvc_by_patient(weeks_df, fvc_pred):
     df = weeks_df.copy()
@@ -20,12 +21,13 @@ def validate_predict(weeks_df, fvc_pred, per_point=False):
     for patient_id, patient_preds in zip(weeks_df['Patient'].unique(), fvc_pred):
         patient_weeks = weeks_df[weeks_df['Patient'] == patient_id]['Weeks'].values
         patient_fvc = weeks_df[weeks_df['Patient'] == patient_id]['FVC'].values
+        first_fvc = weeks_df[weeks_df['Patient'] == patient_id]['FVC_first'].values[0]
 
         last_fvc = patient_fvc[-3:]
         last_preds = patient_preds[-3:]
 
         y_true.extend(denormalize(last_fvc))
-        y_pred.extend(denormalize(last_preds))
+        y_pred.extend(denormalize(first_fvc) + denormalize_diff(last_preds))
 
     y_true = np.array(y_true)
     y_pred = np.array(y_pred)

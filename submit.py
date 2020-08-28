@@ -3,7 +3,7 @@ import numpy as np
 from preprocess import normalize_df, denormalize, add_first_point
 from train import getX
 from constants import WEEKS, MIN_WEEK, MAX_WEEK
-from features import encode_categorical, add_features_before_normalization, add_categorical_features, add_features_after_normalization, normalize_features
+from features import encode_categorical, add_features_before_normalization, add_categorical_features, add_features_after_normalization, normalize_features, denormalize_diff
 
 def add_weeks_to_test(df):
     df = df.copy()
@@ -38,8 +38,10 @@ def submit_preds(df_test, df_train, clfs, skbs, sigma):
             fvc_pred = clf.predict(X_test_best).flatten()
             preds.append(fvc_pred)
     preds = np.mean(preds, axis=0)
+    first_fvc = df_test['FVC_first'].values
+    preds = denormalize(first_fvc) + denormalize_diff(preds)
 
-    df_test['FVC'] = denormalize(preds)
+    df_test['FVC'] = preds
     submit_df = df_test[['FVC', 'Patient_Week']]
     submit_df['Confidence'] = sigma
     submit_df = submit_df.reindex(columns=['Patient_Week', 'FVC', 'Confidence'])

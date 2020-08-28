@@ -18,6 +18,7 @@ FEATS_TO_AVERAGE = [
 ]
 ADDED_CATEGORICAL_FEATURES = {}
 FEATURE_AVERAGE_ALPHA = 5
+FVC_DIFF_SCALE = None
 
 def add_features_before_normalization(df):
     df = df.copy()
@@ -28,6 +29,7 @@ def add_features_before_normalization(df):
 
         df.loc[df['Patient'] == patient, 'FVC_perc'] = np.mean(fvc / percent) * 100.
 
+    df['FVC_diff'] = df['FVC'] - df.groupby('Patient').transform('first')['FVC']
     return df
 
 def add_categorical_features(df):
@@ -94,6 +96,9 @@ def add_features_after_normalization(df_dest, df_src):
 def init_features_normalizer(df):
     numeric_df = df[FIT_COLUMNS_FEATURES]
     NORMALIZER_FEATURES.fit(numeric_df)
+    global FVC_DIFF_SCALE
+    FVC_DIFF_SCALE = max(np.abs(df['FVC_diff'].min()), np.abs(df['FVC_diff'].max()))
+    print(FVC_DIFF_SCALE)
 
 def select_best_features(X, y, keep_features=None, k=2):    
     skb = SelectKBest(f_regression, k=k)
@@ -121,4 +126,8 @@ def normalize_features(df):
     fvc_min = FVC_RANGE[0]
     fvc_max = FVC_RANGE[1]
     df['FVC_perc'] = (df['FVC_perc'] - fvc_min) / (fvc_max - fvc_min)
+    df['FVC_diff'] /= FVC_DIFF_SCALE
     return df
+
+def denormalize_diff(y):
+    return y * FVC_DIFF_SCALE

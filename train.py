@@ -9,7 +9,7 @@ from utils import _laplace, laplace_optimal
 import itertools
 import pickle
 
-X_DROP_COLUMNS = ['Patient', 'FVC', 'Percent']
+X_DROP_COLUMNS = ['Patient', 'FVC', 'FVC_diff', 'Percent']
 
 def getX(df):
     if 'Patient_Week' in df.columns:
@@ -18,7 +18,7 @@ def getX(df):
         return df.drop(columns=X_DROP_COLUMNS).values
     
 def getY(df):
-    return df['FVC'].values
+    return df['FVC_diff'].values
 
 def get_X_y(df):
     return getX(df), getY(df)
