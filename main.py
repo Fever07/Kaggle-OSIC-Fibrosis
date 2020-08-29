@@ -32,10 +32,10 @@ if __name__ == "__main__":
     print(drop_first_point(df_train).shape)
 
     random_states = [
-        41,
-        81, 
-        901, 
-        1337,
+        # 41,
+        # 81, 
+        # 901, 
+        # 1337,
         2020
     ]
 

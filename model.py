@@ -9,6 +9,7 @@ from sklearn.metrics import r2_score
 import sklearn.linear_model as lm
 import numpy as np
 from lightgbm import LGBMRegressor as lgmbr
+from lightgbm import train, Dataset
 
 C1, C2 = tf.constant(70, dtype='float32'), tf.constant(1000, dtype="float32")
 def score(y_true, y_pred):
@@ -79,14 +80,25 @@ def get_models(num_features, include_nn=True, random_state=42):
     #       'random_state': random_state}))
     clfs.append(lm.Ridge(random_state=random_state))
     clfs.append(lm.HuberRegressor(max_iter=10000))
-    if include_nn:
-        clfs.append(get_nn_model(num_features=num_features, random_state=random_state))
+    # if include_nn:
+    #     clfs.append(get_nn_model(num_features=num_features, random_state=random_state))
     clfs.append(svm.SVR(kernel='linear'))
-    # clfs.append(lgmbr(
-    #     max_depth=4,
-    #     n_estimators=64,
-    #     num_leaves=4,
-    #     random_state=random_state,
-    #     min_child_samples=32,
-    # ))
     return clfs
+
+def run_train(X, y, categorical_features=None, random_state=42):
+    dataset = Dataset(data=X, label=y, categorical_feature=categorical_features)
+    clf = train({
+        'seed': random_state,
+        'num_leaves': 6,
+        'learning_rate': 0.01,
+        'n_estimators': 1000,
+        'max_depth': 6,
+        'min_child_samples': 32,
+        'objective': 'mae',
+        'num_iterations': 16,
+        'min_data_per_group': 32
+    },
+    train_set=dataset,
+    num_boost_round=100,
+    categorical_feature=categorical_features)
+    return clf

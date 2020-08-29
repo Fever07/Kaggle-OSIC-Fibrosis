@@ -74,6 +74,19 @@ def encode_categorical(df):
     df.drop(columns=CATEGORICAL_FEATURES.keys(), inplace=True)
     return df
 
+def decode_categorical(df):
+    from features import ADDED_CATEGORICAL_FEATURES
+    df = df.copy()
+    categorical_features = {**CATEGORICAL_FEATURES, **ADDED_CATEGORICAL_FEATURES}
+    for feature in categorical_features:
+        values = categorical_features[feature]
+        for val in values:
+            df.loc[df[val] == 1.0, feature] = values.index(val)
+    
+        df.drop(columns=values, inplace=True)
+
+    return df
+
 def prepare_df(df):
     df = df.copy()
     encode_categorical(df)

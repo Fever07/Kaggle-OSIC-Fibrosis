@@ -3,11 +3,12 @@ from sklearn.model_selection import KFold as KF
 from model import get_models, is_net
 import numpy as np
 from validate import validate
-from preprocess import normalize_df, drop_first_point, remove_outliers
+from preprocess import normalize_df, drop_first_point, remove_outliers, decode_categorical
 from features import select_best_features, add_features_after_normalization
 from utils import _laplace, laplace_optimal
 import itertools
 import pickle
+from model import run_train
 
 X_DROP_COLUMNS = ['Patient', 'FVC', 'Percent']
 
@@ -54,6 +55,8 @@ def train(df_train_coef, df_train, random_states, include_nn=True):
             # val_df.to_csv('val_df.csv')
             # exit()
 
+            # train_df = decode_categorical(train_df)
+            # val_df = decode_categorical(val_df)
             X_train, y_train = get_X_y(train_df)
             X_val, y_val = get_X_y(val_df)
 
@@ -64,9 +67,10 @@ def train(df_train_coef, df_train, random_states, include_nn=True):
             X_val = skb.transform(X_val)
             skbs.append(skb)            
 
-            _clfs = get_models(num_features=X_train.shape[1], include_nn=include_nn, random_state=random_state)
             train_fold_preds = []
             val_fold_preds = []
+
+            _clfs = get_models(num_features=X_train.shape[1], include_nn=include_nn, random_state=random_state)
             for clf in _clfs:
                 if is_net(clf):
                     clf.fit(X_train, y_train, epochs=20, verbose=0)
@@ -74,8 +78,17 @@ def train(df_train_coef, df_train, random_states, include_nn=True):
                     clf.fit(X_train, y_train)
                 train_fold_preds.append(clf.predict(X_train).flatten())
                 val_fold_preds.append(clf.predict(X_val).flatten())
-
             clfs.append(_clfs)
+
+            # from preprocess import CATEGORICAL_FEATURES
+            # from features import ADDED_CATEGORICAL_FEATURES
+            # categorical_features = {**CATEGORICAL_FEATURES, **ADDED_CATEGORICAL_FEATURES}
+            # categorical_inds = [train_df.drop(columns=X_DROP_COLUMNS).columns.get_loc(feat) for feat in categorical_features]
+            # clf = run_train(X_train, y_train, categorical_features=categorical_inds, random_state=random_state)
+            # train_fold_preds.append(clf.predict(X_train).flatten())
+            # val_fold_preds.append(clf.predict(X_val).flatten())
+            # clfs.append([clf])
+            
             train_fold_preds = np.mean(train_fold_preds, axis=0)
             val_fold_preds = np.mean(val_fold_preds, axis=0)
 
