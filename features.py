@@ -12,7 +12,8 @@ FIT_COLUMNS_FEATURES = ['FVC_perc']
 FEATS_TO_AVERAGE = [
     'FVC_last_first',
     'Weeks_last_first',
-    'Coef_last_first'
+    'Coef_last_first',
+    'Coef'
 ]
 ADDED_CATEGORICAL_FEATURES = {}
 FEATURE_AVERAGE_ALPHA = 5
@@ -61,7 +62,7 @@ def add_features_after_normalization(df_dest, df_src):
     for NUM_FEATURES in [1, 2, 3]:
         pairs_categorical_features = list(itertools.combinations(categorical_features, NUM_FEATURES))
         
-        for feat_to_average in FEATS_TO_AVERAGE + ['Coef']:
+        for feat_to_average in FEATS_TO_AVERAGE:
             global_average = pat_df_src[feat_to_average].mean()
             for pair_categorical in pairs_categorical_features:
                 pair_values = list(itertools.product(*[categorical_features[feature] for feature in pair_categorical]))

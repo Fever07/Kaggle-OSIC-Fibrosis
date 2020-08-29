@@ -64,7 +64,7 @@ def add_coef(df):
     df = df.copy()
     for patient_id in df['Patient'].unique():
         pat_df = df[df['Patient'] == patient_id]
-        coef = get_coef(pat_df['Weeks'].values, pat_df['FVC'].values)
+        coef, _ = get_coef(pat_df['Weeks'].values, pat_df['FVC'].values)
         df.loc[df['Patient'] == patient_id, 'Coef'] = [coef] * (df['Patient'] == patient_id).sum()
 
     return df

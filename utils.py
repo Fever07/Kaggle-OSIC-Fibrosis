@@ -25,17 +25,29 @@ def mae(y_true, y_pred):
 def mare(y_true, y_pred):
     return np.mean(np.abs(y_true - y_pred) / (y_true + eps))
 
-def get_coef(x, y): 
-    errors = []
-    clfs = []
-    for i in range(len(x)):
-        x_fold = np.concatenate([x[: i], x[i+1: ]])
-        y_fold = np.concatenate([y[: i], y[i+1: ]])
-        clf = lm.LinearRegression()
-        clf.fit(x_fold.reshape(-1, 1), y_fold)
-        errors.append(mae(clf.predict(x_fold.reshape(-1, 1)), y_fold))
-        clfs.append(clf)
+def get_coef(x, y):
+    clf = lm.LinearRegression()
+    clf.fit(x.reshape(-1, 1), y)
+    return clf.coef_, clf.intercept_
+
+# def get_coef(x, y): 
+#     errors = []
+#     clfs = []
+#     for i in range(len(x)):
+#         x_fold = np.concatenate([x[: i], x[i+1: ]])
+#         y_fold = np.concatenate([y[: i], y[i+1: ]])
+#         clf = lm.LinearRegression()
+#         clf.fit(x_fold.reshape(-1, 1), y_fold)
+#         errors.append(mae(clf.predict(x_fold.reshape(-1, 1)), y_fold))
+#         clfs.append(clf)
         
-    i = np.argmin(errors)
-    clf = clfs[i]
-    return clf.coef_
+#     i = np.argmin(errors)
+#     clf = clfs[i]
+#     return clf.coef_, clf.intercept_
+
+# def get_coef(x, y):
+#     x = (x - x[0])[0:]
+#     y = (y - y[0])[0:]
+#     clf = lm.LinearRegression(fit_intercept=True)
+#     clf.fit(x.reshape(-1, 1), y)
+#     return clf.coef_, clf.intercept_
