@@ -10,6 +10,8 @@ import sklearn.linear_model as lm
 import numpy as np
 from lightgbm import LGBMRegressor as lgmbr
 from lightgbm import train, Dataset
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import PolynomialFeatures
 
 C1, C2 = tf.constant(70, dtype='float32'), tf.constant(1000, dtype="float32")
 def score(y_true, y_pred):
@@ -72,17 +74,18 @@ def is_net(clf):
 
 def get_models(num_features, include_nn=True, random_state=42):
     clfs = []
-    # clfs.append(GBR(**{'n_estimators': 300,
-    #       'max_depth': 4,
-    #       'min_samples_split': 8,
-    #       'learning_rate': 0.0075,
-    #       'loss': 'huber',
-    #       'random_state': random_state}))
+    clfs.append(GBR(**{'n_estimators': 300,
+          'max_depth': 4,
+          'min_samples_split': 8,
+          'learning_rate': 0.0075,
+          'loss': 'huber',
+          'random_state': random_state}))
     clfs.append(lm.Ridge(random_state=random_state))
     clfs.append(lm.HuberRegressor(max_iter=10000))
-    # if include_nn:
-    #     clfs.append(get_nn_model(num_features=num_features, random_state=random_state))
+    if include_nn:
+        clfs.append(get_nn_model(num_features=num_features, random_state=random_state))
     clfs.append(svm.SVR(kernel='linear'))
+    clfs.append(make_pipeline(PolynomialFeatures(3), lm.Ridge(random_state=random_state)))
     return clfs
 
 def run_train(X, y, categorical_features=None, random_state=42):
