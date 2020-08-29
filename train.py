@@ -5,6 +5,9 @@ import numpy as np
 from validate import validate
 from preprocess import normalize_df, row_per_patient
 from features import select_best_features, add_features_after_normalization
+import pickle
+from utils import _laplace, laplace_optimal
+import itertools
 
 def getX(df):
     if 'Coef' in df.columns:
@@ -29,15 +32,16 @@ def train_val_split(df, random_state=2020):
 
 def train(df_train_coef, df_train):
     preds = []
+    train_maes = []
     maes = []
     clfs = []
     skbs = []
 
     random_states = [
-        41,
-        81, 
-        901, 
-        1337, 
+        # 41,
+        # 81, 
+        # 901, 
+        # 1337, 
         2020
     ]
 
@@ -76,18 +80,39 @@ def train(df_train_coef, df_train):
             train_fold_coefs = np.mean(train_fold_preds, axis=0)
             val_fold_coefs = np.mean(val_fold_preds, axis=0)
 
+            with open(f'coefs/seed_{random_state}_fold_{fold}.pkl', 'wb') as file:
+                pickle.dump(train_fold_coefs, file)
+                pickle.dump(val_fold_coefs, file)
+
             train_weeks_df = df_train[df_train['Patient'].isin(train_df['Patient'])]
             val_weeks_df = df_train[df_train['Patient'].isin(val_df['Patient'])]
 
-            _mae = validate(val_weeks_df, val_df, val_fold_coefs)
+            _mae = validate(val_weeks_df, val_df, val_fold_coefs, per_point=True)
             maes.append(_mae)
-        
-    print(f'MAE: {np.mean(maes)}')
-    print(f'STD: {np.std(maes)}')
+
+            _tr_mae = validate(train_weeks_df, train_df, train_fold_coefs, per_point=True)
+            train_maes.append(_tr_mae)
+
+    # print(f'MAES: {maes}') 
+    print('********TRAIN********')
+    per_fold_maes = [np.mean(fold_maes) for fold_maes in train_maes]
+    val_mae = np.mean(per_fold_maes)
+    print(f'MAE: {val_mae}')
+    print(f'STD: {np.std(per_fold_maes)}')
+
+    print('********VALIDATION********')
+    per_fold_maes = [np.mean(fold_maes) for fold_maes in maes]
+    val_mae = np.mean(per_fold_maes)
+    print(f'MAE: {val_mae}')
+    print(f'STD: {np.std(per_fold_maes)}')
+
+    print(f'Laplace: {_laplace(val_mae, val_mae * np.sqrt(2))}')
+    maes_flatten = np.array(list(itertools.chain(*maes)))
+    print(f'Laplace opt.: {laplace_optimal(np.array(list(itertools.chain(*maes))))}')
 
     # import pickle
     # with open('scores.pkl', 'wb') as file:
     #     pickle.dump(train_df.drop(columns=['Patient', 'Coef']).columns, file)
     #     pickle.dump(scores, file)
 
-    return clfs, skbs, np.mean(maes)
+    return clfs, skbs, val_mae
