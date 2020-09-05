@@ -55,6 +55,8 @@ def add_features_after_normalization(df_dest, df_src):
     df_src['FVC_last'] = df_src.groupby('Patient').transform('last')['FVC']
     df_src['Weeks_last'] = df_src.groupby('Patient').transform('last')['Weeks']
 
+    feats_to_average = FEATS_TO_AVERAGE
+
     pat_df_dest = row_per_patient(df_dest)
     pat_df_src = row_per_patient(df_src)
 
@@ -64,30 +66,34 @@ def add_features_after_normalization(df_dest, df_src):
     
     for NUM_FEATURES in [1, 2, 3]:
         pairs_categorical_features = list(itertools.combinations(categorical_features, NUM_FEATURES))
-        
-        for feat_to_average in FEATS_TO_AVERAGE:
-            global_average = pat_df_src[feat_to_average].mean()
-            for pair_categorical in pairs_categorical_features:
-                pair_values = list(itertools.product(*[categorical_features[feature] for feature in pair_categorical]))
-                new_feat = f'{feat_to_average}_average_by_{pair_categorical}'
-                for values_tuple in pair_values:
-                    values_conditions_src = [pat_df_src[value] == 1.0 for value in values_tuple]
-                    values_tuple_conditions_src = values_conditions_src[0]
-                    for value_condition in values_conditions_src:
-                        values_tuple_conditions_src &= value_condition
-                    
-                    values_conditions_dest = [df_dest[value] == 1.0 for value in values_tuple]
-                    values_tuple_conditions_dest = values_conditions_dest[0]
-                    for value_condition in values_conditions_dest:
-                        values_tuple_conditions_dest &= value_condition
 
-                    pair_df_src = pat_df_src[values_tuple_conditions_src]
-                    K = pair_df_src.shape[0]
-                    if K == 0:
-                        df_dest.loc[values_tuple_conditions_dest, new_feat] = global_average
-                    else:
-                        average_by_category = pair_df_src[feat_to_average].mean()
-                        df_dest.loc[values_tuple_conditions_dest, new_feat] = (average_by_category * K + global_average * FEATURE_AVERAGE_ALPHA) / (K + FEATURE_AVERAGE_ALPHA)
+        global_average = pat_df_src[feats_to_average].mean()
+        for pair_categorical in pairs_categorical_features:
+            pair_values = list(itertools.product(*[categorical_features[feature] for feature in pair_categorical]))
+            new_feats = np.array([f'{feat_to_average}_average_by_{pair_categorical}' for feat_to_average in feats_to_average])
+            for values_tuple in pair_values:
+                values_conditions_src = [pat_df_src[value] == 1.0 for value in values_tuple]
+                values_tuple_conditions_src = values_conditions_src[0]
+                for value_condition in values_conditions_src:
+                    values_tuple_conditions_src &= value_condition
+                
+                values_conditions_dest = [df_dest[value] == 1.0 for value in values_tuple]
+                values_tuple_conditions_dest = values_conditions_dest[0]
+                for value_condition in values_conditions_dest:
+                    values_tuple_conditions_dest &= value_condition
+
+                pair_df_src = pat_df_src[values_tuple_conditions_src]
+                K = pair_df_src.shape[0]
+                if K == 0:
+                    df_dest.loc[values_tuple_conditions_dest, new_feats] = global_average[feats_to_average].values
+                else:
+                    average_by_category = pair_df_src[feats_to_average].mean()
+                    isnan_mask = np.isnan(average_by_category)
+
+                    if sum(isnan_mask) != 0:
+                        df_dest.loc[values_tuple_conditions_dest, new_feats[isnan_mask]] = global_average[np.array(feats_to_average)[isnan_mask]].values
+                    if sum(isnan_mask) != len(isnan_mask):
+                        df_dest.loc[values_tuple_conditions_dest, new_feats[~isnan_mask]] = ((average_by_category[np.array(feats_to_average)[~isnan_mask]] * K + global_average[np.array(feats_to_average)[~isnan_mask]] * FEATURE_AVERAGE_ALPHA) / (K + FEATURE_AVERAGE_ALPHA)).values
 
     return df_dest
 

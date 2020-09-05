@@ -30,6 +30,11 @@ def remove_outliers(df):
     df.drop(index=index, inplace=True)
     return df
 
+def best_constant(x):
+    y = x.copy()
+    y.sort()
+    return y[1]
+
 def row_per_patient(df):
     return pd.concat([
         pd.Series(df['Patient'].unique(), name='Patient'),
@@ -48,6 +53,8 @@ def add_first_point(df):
     df['Weeks_first'] = first_weeks['Weeks']
     df['FVC_first'] = first_weeks['FVC']
     df['Percent_first'] = first_weeks['Percent']
+    for patient in df['Patient'].unique():
+        df.loc[df['Patient'] == patient, 'FVC_best_diff'] = best_constant(df[df['Patient'] == patient]['FVC'].values[-3:]) - df[df['Patient'] == patient]['FVC'].values[0]
     return df
 
 def init_normalizer(df):

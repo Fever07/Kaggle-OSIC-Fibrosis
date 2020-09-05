@@ -4,6 +4,7 @@ from preprocess import normalize_df, denormalize, add_first_point
 from train import getX
 from constants import WEEKS, MIN_WEEK, MAX_WEEK
 from features import encode_categorical, add_features_before_normalization, add_categorical_features, add_features_after_normalization, normalize_features
+from model import predict_confidence
 
 def add_weeks_to_test(df):
     df = df.copy()
@@ -15,33 +16,33 @@ def add_weeks_to_test(df):
     df['Weeks'] = np.array([WEEKS.tolist()] * len(patient_ids)).T.flatten()
     return df
 
-def submit_preds(df_test, df_train, clfs, skbs, sigma):
+def submit_preds(df_test, df_train, clfs):
     df_test = df_test.copy()
     df_test = encode_categorical(df_test)
 
     df_test = add_features_before_normalization(df_test)
     df_test = add_categorical_features(df_test)
 
-    df_test = normalize_df(df_test)
-    df_test = normalize_features(df_test)
+    # df_test = normalize_df(df_test)
+    # df_test = normalize_features(df_test)
 
     df_test = add_weeks_to_test(df_test)
     df_test.to_csv('df_test.csv')
 
-    df_test = add_features_after_normalization(df_test, df_train)
+    # df_test = add_features_after_normalization(df_test, df_train)
 
+    df_test = df_test[['Patient', 'Patient_Week', 'Currently smokes', 'Male', 'FVC', 'FVC_best_diff', 'Percent']]
     X_test = getX(df_test)
     preds = []
-    for fold_clfs, skb in zip(clfs, skbs):
-        X_test_best = skb.transform(X_test)
+    for fold_clfs in clfs:
         for clf in fold_clfs:
-            fvc_pred = clf.predict(X_test_best).flatten()
-            preds.append(fvc_pred)
+            _preds = predict_confidence(clf, X_test)
+            preds.append(_preds)
     preds = np.mean(preds, axis=0)
 
-    df_test['FVC'] = denormalize(preds)
-    submit_df = df_test[['FVC', 'Patient_Week']]
-    submit_df['Confidence'] = sigma
+    df_test['FVC'] = df_test['FVC'] + preds[:, 0]
+    df_test['Confidence'] = preds[:, 1]
+    submit_df = df_test[['FVC', 'Patient_Week', 'Confidence']]
     submit_df = submit_df.reindex(columns=['Patient_Week', 'FVC', 'Confidence'])
     submit_df.to_csv('submission.csv', index=False)
 

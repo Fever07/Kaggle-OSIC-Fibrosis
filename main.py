@@ -22,10 +22,10 @@ if __name__ == "__main__":
     df_train = add_features_before_normalization(df_train)
     df_train = add_categorical_features(df_train)
 
-    init_normalizer(pd.concat([df_train, df_test]))
-    df_train = normalize_df(df_train)
-    init_features_normalizer(df_train)
-    df_train = normalize_features(df_train)
+    # init_normalizer(pd.concat([df_train, df_test]))
+    # df_train = normalize_df(df_train)
+    # init_features_normalizer(df_train)
+    # df_train = normalize_features(df_train)
 
     df_train = add_first_point(df_train)
     df_train.to_csv('df_train.csv')
@@ -39,5 +39,11 @@ if __name__ == "__main__":
         2020
     ]
 
-    clfs, skbs, mean_mae = train(df_train, df_train, include_nn=False, random_states=random_states)
-    submit_preds(df_test, df_train, clfs, skbs, mean_mae * np.sqrt(2))
+    # clfs, skbs, mean_mae = train(df_train, df_train, include_nn=False, random_states=random_states)
+    # submit_preds(df_test, df_train, clfs, skbs, mean_mae * np.sqrt(2))
+    # clfs, mean_mae = train(df_train, df_train, random_states=random_states)
+    # submit_preds(df_test, df_train, clfs, mean_mae * np.sqrt(2))
+
+    clfs = train(df_train, df_train, random_states=random_states)
+    submit_preds(df_test, df_train, clfs)
+    
